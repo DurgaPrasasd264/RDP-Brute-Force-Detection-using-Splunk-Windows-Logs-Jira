@@ -228,17 +228,22 @@ T1078	Valid Accounts
 
 
 Jira SOC Board
+![](https://github.com/DurgaPrasasd264/RDP-Brute-Force-Detection-using-Splunk-Windows-Logs-Jira/blob/ccc690dc3bbac68465569ac079a0973506c69898/Screenshots/image1.png)
 
 Splunk Triggered Alerts
+![](https://github.com/DurgaPrasasd264/RDP-Brute-Force-Detection-using-Splunk-Windows-Logs-Jira/blob/ccc690dc3bbac68465569ac079a0973506c69898/Screenshots/image2.png)
 
 Splunk Alert Config
+![](https://github.com/DurgaPrasasd264/RDP-Brute-Force-Detection-using-Splunk-Windows-Logs-Jira/blob/ccc690dc3bbac68465569ac079a0973506c69898/Screenshots/image3.png)
 
 Kali RDP Session
+![](https://github.com/DurgaPrasasd264/RDP-Brute-Force-Detection-using-Splunk-Windows-Logs-Jira/blob/ccc690dc3bbac68465569ac079a0973506c69898/Screenshots/image4.png)
 
 Jira Suspicious Login
+![](https://github.com/DurgaPrasasd264/RDP-Brute-Force-Detection-using-Splunk-Windows-Logs-Jira/blob/ccc690dc3bbac68465569ac079a0973506c69898/Screenshots/image5.png)
 
 Jira Failed Login
-
+![](https://github.com/DurgaPrasasd264/RDP-Brute-Force-Detection-using-Splunk-Windows-Logs-Jira/blob/ccc690dc3bbac68465569ac079a0973506c69898/Screenshots/image6.png)
 
 ## ✅ Key Outcomes
 Detected brute-force attack using Splunk
