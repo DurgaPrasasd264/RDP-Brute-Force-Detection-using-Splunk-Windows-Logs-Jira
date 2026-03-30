@@ -1,232 +1,270 @@
 # 🛡️ SOC Mini Lab — RDP Brute Force Detection & Incident Response
 
-> End-to-end Security Operations Center (SOC) simulation covering attack execution, SIEM detection, alerting, ticketing, and incident response (L1 & L2).
+> A hands-on Security Operations Center (SOC) project that simulates an RDP brute-force attack, collects Windows authentication logs in Splunk, triggers detections and alerts, creates Jira tickets, and follows a realistic L1/L2 incident response workflow.
 
 ---
 
 ## 📌 Project Overview
 
-This project demonstrates a real-world SOC workflow where a brute-force attack is detected, investigated, and mitigated using Splunk SIEM and Jira ticketing.
+This project was built to simulate how a SOC team detects and responds to suspicious authentication activity in a Windows environment.
 
-The lab replicates how SOC teams handle authentication-based attacks such as RDP brute-force attempts.
+The lab demonstrates an end-to-end blue team workflow:
 
-### 🔍 Key Highlights
-- Detection of brute-force attacks using Windows logs
-- Correlation of failed and successful login events
-- Real-time alerting in Splunk
-- SOC workflow (L1 triage → L2 investigation → response)
-- Incident tracking using Jira
+- Attack simulation from Kali Linux
+- Windows log generation on victim systems
+- Log forwarding and analysis in Splunk
+- Alert creation and triggering in Splunk
+- Ticket creation and workflow tracking in Jira
+- L1 triage and L2 investigation
+- Incident documentation and containment recommendations
+
+The main attack simulated in this lab is an **RDP brute-force attack** from a Kali Linux machine against a Windows host. The attack generated both:
+
+- **Event ID 4625** — Failed login attempts
+- **Event ID 4624** — Successful login
+
+This allowed the lab to cover both the **attack attempt phase** and the **possible account compromise phase**.
+
+---
+
+## 🎯 Objectives
+
+- Simulate a real-world RDP brute-force attack in a controlled lab
+- Capture authentication activity from Windows systems
+- Detect failed and successful logon events in Splunk
+- Build alert logic for brute-force behavior
+- Use Jira to track incidents like a real SOC
+- Perform L1 triage and L2 investigation
+- Document the incident using professional SOC reporting style
 
 ---
 
 ## 🏗️ Lab Architecture
 
+```text
+Kali Linux (Attacker) ───────────────▶ Windows 11 (Victim)
+192.168.213.129                         192.168.213.130
+        │                                       │
+        │                    Windows Security Logs (4625 / 4624)
+        │                                       │
+        └───────────────────────────────────────┘
+                                                │
+                                      Log Forwarding to Splunk
+                                                │
+                                                ▼
+                                   Splunk Enterprise SIEM
+                                      192.168.213.132
+                                                │
+                                   Detection Rules / Scheduled Alerts
+                                                │
+                                                ▼
+                                           Jira Tickets
+                                                │
+                                                ▼
+                                L1 Triage → L2 Investigation → Resolution
 
-Kali Linux (Attacker) ──▶ RDP Attack ──▶ Windows 11 (Victim)
-192.168.213.129 192.168.213.130
-│
-Splunk Forwarder (Logs)
-│
-▼
-Splunk Enterprise (SIEM)
-192.168.213.132
-│
-Alert Triggered
-│
-▼
-Jira Ticket Created
 
-
+```
 ---
 
-## 🧰 Tools & Technologies
+## 🧰 Tools Used
 
-| Tool | Purpose |
-|------|--------|
-| Kali Linux | Attack simulation (RDP brute force) |
-| Windows 10/11 | Target systems generating logs |
-| Ubuntu | Splunk hosting environment |
-| Splunk Enterprise | Log analysis, detection & alerting |
-| Jira | Incident tracking |
+| Tool | Role |
+|------|------|
+| Kali Linux | Attack simulation |
+| Windows 11 | Victim machine |
+| Windows 10 | Additional victim |
+| Ubuntu | Lab environment |
+| Splunk Enterprise | SIEM detection & alerting |
+| Jira | Incident ticketing |
 
 ---
 
 ## ⚔️ Attack Scenario
 
 - **Attack Type:** RDP Brute Force  
-- **MITRE Technique:** T1110.001  
-- **Protocol:** RDP (Port 3389)
+- **Protocol:** RDP (Port 3389)  
+- **Source IP:** `192.168.213.129`  
+- **Target IP:** `192.168.213.130`
 
-### 📡 Source & Target
-- Source IP: `192.168.213.129`
-- Target IP: `192.168.213.130`
+### Attack Flow
 
-### 🔴 Attack Behavior
-- Multiple failed login attempts (Event ID 4625)
-- Successful login after brute force (Event ID 4624)
-
----
-
-## 📜 Log Analysis
-
-### ❌ Failed Login — Event ID 4625
-- Indicates incorrect password attempts
-- Logon Type 10 (RDP login)
-- High frequency indicates brute-force attack
-
-### ✅ Successful Login — Event ID 4624
-- Indicates successful authentication
-- Critical if preceded by multiple failures
+1. Multiple failed login attempts generated  
+2. Event ID **4625** logged  
+3. Successful login occurred  
+4. Event ID **4624** logged  
+5. Splunk detected abnormal behavior  
+6. Alerts triggered  
+7. Jira tickets created  
 
 ---
 
-## 🔍 Detection Engineering (Splunk SPL)
+## 📜 Windows Security Events
 
-### 🚨 Brute Force Detection
+### Event ID 4625 — Failed Login
+- Indicates incorrect password attempts  
+- Repeated failures = brute-force indicator  
 
+### Event ID 4624 — Successful Login
+- Indicates successful authentication  
+- After failures = possible compromise  
+
+---
+
+## 🔍 Detection Engineering (Splunk)
+
+### Failed Login Detection
 ```spl
-index=windows_security EventCode=4625 Logon_Type=10
-| stats count by src_ip, dest_host
+index=windows_security EventCode=4625
+| stats count by Source_Network_Address
 | where count >= 5
-🚨 Successful Login After Failures
+
+```
+
+### RDP Brute Force Detection
+
+```
+index=windows_security EventCode=4625 Logon_Type=10
+| stats count by Source_Network_Address
+| where count >= 5
+```
+
+### Successful Login Detection
+```
+index=windows_security EventCode=4624
+```
+### Success After Failures
+```
 index=windows_security (EventCode=4624 OR EventCode=4625)
 | stats count(eval(EventCode=4625)) as failed,
         count(eval(EventCode=4624)) as success
-by src_ip, user
-| where failed > 5 AND success > 0
+by Source_Network_Address
+| where failed >= 5 AND success > 0
 ```
-### 🚨 Alerting
+---
+## 🚨 Splunk Alerts
 
-Total Alerts Triggered: 101
+Total alerts triggered: 101
+Alerts configured: 4
+Alert types:
+Failed Login Attempt
+Failed Login Attempts
+RDP brute force detection
+Successful Login Occur
+Why Alerts Triggered
+High number of failed logins
+RDP login attempts detected
+Successful login after failures
+Same source IP behavior
 
-Trigger Conditions:
+## 🎫 Jira Incident Management
 
-
-Multiple failed login attempts detected
-
-Successful login after brute-force activity
-
-Severity: Medium to High
-
-🎫 Incident Management (Jira)
-```
-🟡 Ticket ST-1 — Brute Force Detection
-
+Workflow
+New Alert
+Triage
+Investigation
+Escalated
+Resolved
+### 🟡 Ticket 1 — Failed Login Attempts
+Event ID: 4625
+Source IP: 192.168.213.129
+Target: Windows 11
 Status: Escalated
+Priority: Medium
 
-Priority: High
-```
+Analysis:
+Multiple failed logins indicate brute-force attempt.
 
-```
-🔴 Ticket ST-2 — Suspicious Login
+### 🔴 Ticket 2 — Suspicious Login
+Event ID: 4624
+Source IP: 192.168.213.129
+Status: Investigation
+Priority: Highest
 
-Status: Under Investigation
-
-Priority: Critical
-```
+Analysis:
+Successful login after multiple failures → possible compromise.
 
 ## 🧠 SOC Workflow
-### 🔹 L1 Analyst (Triage)
 
-Validate alerts
-
-Identify suspicious IP activity
-
-Check login patterns
-
-Escalate to L2
-
-### 🔹 L2 Analyst (Investigation)
-
-Correlate Event ID 4625 and 4624
-
-Confirm brute-force behavior
-
-Identify compromised account
-
-### 🔹 Indicators of Compromise (IOCs)
-
-Source IP: 192.168.213.129
-
-Multiple failed logins
-
-Successful login after failures
-
-### 🔹 Containment Actions
-
+L1 Triage
+Validate alert
+Identify source IP
+Check event logs
+Escalate if suspicious
+L2 Investigation
+Correlate 4625 and 4624
+Analyze login behavior
+Confirm attack pattern
+Identify compromise
+Incident Response
 Block attacker IP
+Reset credentials
+Document findings
+## 🧪 Screenshot Analysis
+Jira Board
 
-Reset compromised credentials
+Shows SOC workflow lifecycle (New → Resolved)
 
-Enable account lockout policies
+Splunk Alerts
+101 alerts triggered
+Medium & High severity
+Splunk Config
+4 detection rules enabled
+Kali RDP Session
+Successful access to Windows machine
+Jira Tickets
+Failed login → Escalated
+Successful login → Investigation
 
-### 🔹 Final Verdict
 
-True Positive — Confirmed RDP Brute Force Attack
-
-### 🗺️ MITRE ATT&CK Mapping
+## 🗺️ MITRE ATT&CK Mapping
 Technique	Description
-T1110.001	Brute Force — Password Guessing
-T1021.001	Remote Services — RDP
+T1110.001	Brute Force
+T1021.001	RDP
 T1078	Valid Accounts
-T1190	Exploit Public-Facing Application
-## 📂 Repository Structure
-soc-mini-lab/
-├── docs/
-│   ├── architecture.png
-│   ├── incident-report-ST1.md
-│   └── incident-report-ST2.md
-├── splunk/
-│   ├── detection-rules.spl
-│   └── alert-configs.conf
-├── screenshots/
-│   └── [lab screenshots]
-└── README.md
-### 📸 Screenshots
 
-Splunk Alerts (101 triggered alerts)
+## 📸 Screenshots
 
-Detection Rule Configuration
 
-Kali RDP Attack Terminal
 
-Jira Ticket Workflow
+Jira SOC Board
 
-Incident Tickets (ST-1, ST-2)
+Splunk Triggered Alerts
 
-### 📊 Key Outcomes
+Splunk Alert Config
 
-Successfully detected brute-force attack using Splunk
+Kali RDP Session
 
-Generated and managed Jira tickets
+Jira Suspicious Login
 
-Performed L1 triage and L2 investigation
+Jira Failed Login
 
-Implemented full SOC workflow
 
-Mapped attack to MITRE ATT&CK framework
-
-### 📚 Key Learnings
-
-Importance of Windows Event Logs (4624, 4625)
-
-Detection logic using correlation
-
-SIEM alert tuning
-
-Real-world SOC investigation process
-
-### 🚀 Future Improvements
-
-Integrate SOAR automation
-
-Add threat intelligence enrichment
-
-Implement UEBA (User Behavior Analytics)
-
+## ✅ Key Outcomes
+Detected brute-force attack using Splunk
+Generated 101 alerts
+Created Jira tickets
+Performed L1 & L2 SOC workflow
+Documented full incident lifecycle
+## 📚 Key Learnings
+Event correlation is critical
+Failed + successful login = high risk
+SIEM alerts require tuning
+SOC workflow improves response
+## 🚀 Future Improvements
+Add SOAR automation
+Integrate threat intelligence
+Create Splunk dashboards
 Detect lateral movement
-
-### 👨‍💻 Author
+## 💼 Resume Value
+Splunk SIEM monitoring
+Detection engineering
+Windows log analysis
+SOC L1 & L2 workflow
+Incident response
+## 👤 Author
 
 Durga Prasad
-SOC Analyst | Blue Team Enthusiast
+SOC Analyst | Blue Team | Splunk | Incident Response
+
+
